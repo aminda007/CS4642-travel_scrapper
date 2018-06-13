@@ -32,10 +32,16 @@ class QuotesSpider(scrapy.Spider):
                 print(page)
                 black_list = ['youtube','twitter', 'instagram', 'wikipedia', 'facebook']
                 scrape_list = self.getPages()
-                if any(bl not in page for bl in black_list):
-                    if any(sl not in page for sl in scrape_list):
-                        self.addPage(page)
-                        print("ADDING"+page)
-                        # print(self.getPages())
-                        next_page = response.urljoin(page)
-                        yield scrapy.Request(next_page, callback=self.parse)
+                for bl in black_list:
+                    if bl not in page:
+                        print("NOT BLACKLISTED")
+                        for sl in scrape_list:
+                            if sl not in page:
+                                print("ADDING: "+page)
+                                self.addPage(page)
+                                next_page = response.urljoin(page)
+                                yield scrapy.Request(next_page, callback=self.parse)
+                            else:
+                                print("ALREADY EXISTS: " + page)
+                    else:
+                        print("BLACKLISTED!")
