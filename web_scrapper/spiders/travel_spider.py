@@ -1,6 +1,4 @@
 import re
-from typing import List
-
 import scrapy
 
 
@@ -8,6 +6,7 @@ class QuotesSpider(scrapy.Spider):
     name = "travel"
 
     scrape_list = ['xxxx']
+    name_array = []
     i = 0
 
     def start_requests(self):
@@ -35,18 +34,29 @@ class QuotesSpider(scrapy.Spider):
     def getPages(self):
         return self.scrape_list
 
+    def addName(self,name):
+        self.name_array.append(name)
+
+    def getNames(self):
+        return self.name_array
+
     def parse(self, response):
-        pages = response.url.split("/")[-1]
-        if pages == '':
-            pages = response.url
-        pages = re.sub(r'[/\\?%*:|"<>]', '', pages)
+
+        # scrape_list = self.getPages()
+        # page_url = response.url
+        # self.addPage(page_url)
+        # if not any(substring in page_url for substring in scrape_list):
+        # pages = response.url.split("/")[-1]
+        # if pages == '':
+        #     pages = response.url
+        # pages = re.sub(r'[/\\?%*:|"<>]', '', pages)
         # self.i = self.i + 1
         # filename = 'pages/%s.html' % self.i
 
-        filename = 'pages/travel/%s.html' % pages
-        with open(filename, 'wb') as f:
-            f.write(response.body)
-        print('******************************************************************')
+        # filename = 'pages/travel/%s.html' % pages
+        # with open(filename, 'wb') as f:
+        #     f.write(response.body)
+        # print('******************************************************************')
 
         for quote in response.css('div.travel-hotel-inner'):
             name = quote.css('div.travel-hotel.row div.hname.span6 h4::text').extract_first()
@@ -55,35 +65,32 @@ class QuotesSpider(scrapy.Spider):
             address = quote.css('div.travel-hotel.row div.hname.span6 div.row div.address.span6 p span::text').extract_first()
             website = quote.css('div.travel-hotel.row div.hname.span6 div.row div.span5 p span a::text').extract_first()
             phone_number = quote.css('div.travel-hotel.row div.hname.span6 div.row div.span5 p span::text').extract()[1]
-        yield {
-            'Name': name,
-            'Category': category,
-            'Capacity': capacity,
-            'Address': address,
-            'Phone_Number': phone_number,
-            'Website': website,
-            # 'Capacity': quote.css('::text').extract_first(),
-        }
+
+            nameList = self.getNames()
+            if not any(substring in name for substring in nameList):
+                self.addName(name)
+                yield {
+                    'Name': name,
+                    'Category': category,
+                    'Capacity': capacity,
+                    'Address': address,
+                    'Phone_Number': phone_number,
+                    'Website': website
+                }
+
 
         next_page_list = response.css('div.links a ::attr(href)').extract()
         if next_page_list is not None:
             for page in next_page_list:
                 print(page)
-                black_list = ['youtube', 'twitter', 'instagram', 'wikipedia', 'facebook', 'flickr', 'mailto', 'map.php', 'gov.lk', 'zimbra']
                 scrape_list = self.getPages()
-                if not any(substring in page for substring in black_list):
-                    # print("NOT BLACKLISTED")
-                    if not any(substring in page for substring in scrape_list):
-                        # print("ADDING: "+page)
-                        self.addPage(page)
-                        if 'http' in page:
-                            next_page = page
-                        else:
-                            next_page = response.urljoin(page)
-                        yield scrapy.Request(next_page, callback=self.parse)
+                if not any(substring in page for substring in scrape_list):
+                    # print("ADDING: "+page)
+                    self.addPage(page)
+                    if 'http' in page:
+                        next_page = page
                     else:
-                        print("ALREADY EXISTS: " + page)
-                else:
-                    print("BLACKLISTED!")
-        # print(self.getPages())
-        # print('22222222222222222222222222222222222222222')
+                        next_page = response.urljoin(page)
+                    yield scrapy.Request(next_page, callback=self.parse)
+                # else:
+                #     print("ALREADY EXISTS: " + page)
