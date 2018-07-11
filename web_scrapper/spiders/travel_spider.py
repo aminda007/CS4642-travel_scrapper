@@ -64,7 +64,34 @@ class QuotesSpider(scrapy.Spider):
             capacity = quote.css('div.travel-hotel.row div.hname.span6 div.row div.span1 p span::text').extract_first()
             address = quote.css('div.travel-hotel.row div.hname.span6 div.row div.address.span6 p span::text').extract_first()
             website = quote.css('div.travel-hotel.row div.hname.span6 div.row div.span5 p span a::text').extract_first()
-            phone_number = quote.css('div.travel-hotel.row div.hname.span6 div.row div.span5 p span::text').extract()[1]
+            data = quote.css('div.travel-hotel.row div.hname.span6 div.row div.span5 p span::text').extract()
+            # data = quote.css('div.travel-hotel.row div.hname.span6 div.row div.span5 p span::text').extract()
+            phone_number = None
+            mobile_number = None
+            email = None
+            classification = None
+            grade = None
+            for item in data:
+                item = item.strip()
+                if item.isdigit():
+                    if item[:2] == '07':
+                        mobile_number = item
+                    else:
+                        phone_number = item
+                elif '+94' in item:
+                    item = item.replace("+94", "0")
+                    item = item.replace("-", "")
+                    item = item.replace(" ", "")
+                    if item[:2] == '07':
+                        mobile_number = item
+                    else:
+                        phone_number = item
+                elif '@' in item:
+                    email = item
+                elif len(item) == 1:
+                    grade = item
+                elif item != '' and item.isupper():
+                    classification = item
 
             nameList = self.getNames()
             if not any(substring in name for substring in nameList):
@@ -72,20 +99,23 @@ class QuotesSpider(scrapy.Spider):
                 yield {
                     'Name': name,
                     'Category': category,
+                    'Classification': classification,
+                    'Grade': grade,
                     'Capacity': capacity,
                     'Address': address,
-                    'Phone_Number': phone_number,
-                    'Website': website
+                    'Telephone_Number': phone_number,
+                    'Mobile_Phone_Number': mobile_number,
+                    'Website': website,
+                    'Email': email
                 }
 
 
         next_page_list = response.css('div.links a ::attr(href)').extract()
         if next_page_list is not None:
             for page in next_page_list:
-                print(page)
                 scrape_list = self.getPages()
                 if not any(substring in page for substring in scrape_list):
-                    # print("ADDING: "+page)
+                    print("ADDING: "+page)
                     self.addPage(page)
                     if 'http' in page:
                         next_page = page
